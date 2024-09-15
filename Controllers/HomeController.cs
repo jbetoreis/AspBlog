@@ -1,7 +1,15 @@
+﻿using Microsoft.AspNetCore.Mvc;
+
 namespace AspBlog.Controllers
 {
-    public class HomeController()
+    [ApiController]
+    [Route("")]
+    public class HomeController : ControllerBase
     {
-
+        [HttpGet("")]
+        public IActionResult Get()
+        {
+            return Ok();
+        }
     }
 }
