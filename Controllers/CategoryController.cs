@@ -1,5 +1,6 @@
 using AspBlog.Data;
 using AspBlog.Models;
+using AspBlog.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -43,12 +44,17 @@ namespace AspBlog.Controllers
 
         [HttpPost("v1/categories")]
         public async Task<IActionResult> PostAsync(
-            [FromBody] Category category,
+            [FromBody] EditorCategoryViewModel viewModel,
             [FromServices] DataContext ctx
         )
         {
             try
             {
+                var category = new Category
+                {
+                    Name = viewModel.Name,
+                    Slug = viewModel.Slug
+                };
                 await ctx.Categories.AddAsync(category);
                 await ctx.SaveChangesAsync();
                 return Created($"v1/categories/{category.Id}", category);
@@ -66,20 +72,20 @@ namespace AspBlog.Controllers
         [HttpPut("v1/categories/{id:int}")]
         public async Task<IActionResult> PutAsync(
             [FromRoute] int id,
-            [FromBody] Category category,
+            [FromBody] EditorCategoryViewModel viewModel,
             [FromServices] DataContext ctx
         )
         {
             try
             {
-                var targetCategory = await ctx.Categories.FirstOrDefaultAsync(x => x.Id == id);
-                if (targetCategory == null)
+                var category = await ctx.Categories.FirstOrDefaultAsync(x => x.Id == id);
+                if (category == null)
                     return NotFound();
-                targetCategory.Name = category.Name;
-                targetCategory.Slug = category.Slug;
-                ctx.Categories.Update(targetCategory);
+                category.Name = viewModel.Name;
+                category.Slug = viewModel.Slug;
+                ctx.Categories.Update(category);
                 await ctx.SaveChangesAsync();
-                return Ok(targetCategory);
+                return Ok(category);
             }
             catch (DbUpdateException e)
             {
