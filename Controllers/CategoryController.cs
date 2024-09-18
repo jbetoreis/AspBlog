@@ -1,4 +1,5 @@
 using AspBlog.Data;
+using AspBlog.Extensions;
 using AspBlog.Models;
 using AspBlog.ViewModels;
 using Microsoft.AspNetCore.Mvc;
@@ -19,12 +20,12 @@ namespace AspBlog.Controllers
             {
                 var category = await ctx.Categories.FirstOrDefaultAsync(x => x.Id == id);
                 if (category == null)
-                    return NotFound();
-                return Ok(category);
+                    return NotFound(new ResultViewModel<Category>("Registro não encontrado"));
+                return Ok(new ResultViewModel<Category>(category));
             }
-            catch (Exception e)
+            catch
             {
-                return StatusCode(500, "Houve um erro interno no servidor");
+                return StatusCode(500, new ResultViewModel<Category>("Houve um erro interno no servidor"));
             }
         }
 
@@ -34,11 +35,11 @@ namespace AspBlog.Controllers
             try
             {
                 var categories = await ctx.Categories.AsNoTracking().ToListAsync();
-                return Ok(categories);
+                return Ok(new ResultViewModel<List<Category>>(categories));
             }
-            catch (Exception e)
+            catch
             {
-                return StatusCode(500, "Houve um erro interno no servidor");
+                return StatusCode(500, new ResultViewModel<List<Category>>("Houve um erro interno no servidor"));
             }
         }
 
@@ -48,6 +49,9 @@ namespace AspBlog.Controllers
             [FromServices] DataContext ctx
         )
         {
+            if (!ModelState.IsValid)
+                return BadRequest(new ResultViewModel<Category>(ModelState.GetErrors()));
+
             try
             {
                 var category = new Category
@@ -57,15 +61,15 @@ namespace AspBlog.Controllers
                 };
                 await ctx.Categories.AddAsync(category);
                 await ctx.SaveChangesAsync();
-                return Created($"v1/categories/{category.Id}", category);
+                return Created($"v1/categories/{category.Id}", new ResultViewModel<Category>(category));
             }
             catch (DbUpdateException e)
             {
-                return StatusCode(500, "Houve um erro ao tentar salvar os dados no banco");
+                return StatusCode(500, new ResultViewModel<Category>("Houve um erro ao tentar salvar os dados no banco"));
             }
-            catch (Exception e)
+            catch
             {
-                return StatusCode(500, "Houve um erro interno no servidor");
+                return StatusCode(500, new ResultViewModel<List<Category>>("Houve um erro interno no servidor"));
             }
         }
 
@@ -76,11 +80,14 @@ namespace AspBlog.Controllers
             [FromServices] DataContext ctx
         )
         {
+            if (!ModelState.IsValid)
+                return BadRequest(new ResultViewModel<Category>(ModelState.GetErrors()));
+
             try
             {
                 var category = await ctx.Categories.FirstOrDefaultAsync(x => x.Id == id);
                 if (category == null)
-                    return NotFound();
+                    return NotFound(new ResultViewModel<Category>("Registro não encontrado"));
                 category.Name = viewModel.Name;
                 category.Slug = viewModel.Slug;
                 ctx.Categories.Update(category);
@@ -89,11 +96,11 @@ namespace AspBlog.Controllers
             }
             catch (DbUpdateException e)
             {
-                return StatusCode(500, "Houve um erro ao tentar salvar os dados no banco");
+                return StatusCode(500, new ResultViewModel<Category>("Houve um erro ao tentar salvar os dados no banco"));
             }
-            catch (Exception e)
+            catch
             {
-                return StatusCode(500, "Houve um erro interno no servidor");
+                return StatusCode(500, new ResultViewModel<Category>("Houve um erro interno no servidor"));
             }
         }
 
@@ -107,18 +114,18 @@ namespace AspBlog.Controllers
             {
                 var category = await ctx.Categories.FirstOrDefaultAsync(x => x.Id == id);
                 if (category == null)
-                    return NotFound();
+                    return NotFound(new ResultViewModel<Category>("Registro não encontrado"));
                 ctx.Categories.Remove(category);
                 await ctx.SaveChangesAsync();
-                return Ok(category);
+                return Ok(new ResultViewModel<Category>(category));
             }
             catch (DbUpdateException e)
             {
-                return StatusCode(500, "Houve um erro ao tentar apagar os dados do banco");
+                return StatusCode(500, new ResultViewModel<Category>("Houve um erro ao tentar apagar os dados do banco"));
             }
-            catch (Exception e)
+            catch
             {
-                return StatusCode(500, "Houve um erro interno no servidor");
+                return StatusCode(500, new ResultViewModel<Category>("Houve um erro interno no servidor"));
             }
         }
     }
