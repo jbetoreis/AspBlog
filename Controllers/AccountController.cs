@@ -13,10 +13,33 @@ namespace AspBlog.Controllers;
 public class AccountController : ControllerBase
 {
     [HttpPost("v1/accounts/login")]
-    public IActionResult Login([FromServices] TokenService tokenService)
+    public async Task<IActionResult> Login(
+        [FromBody] LoginViewModel viewModel,
+        [FromServices] DataContext ctx,
+        [FromServices] TokenService tokenService
+    )
     {
-        var token = tokenService.GenerateToken(null);
-        return Ok(token);
+        if (!ModelState.IsValid)
+            return BadRequest(new ResultViewModel<string>(ModelState.GetErrors()));
+
+        try
+        {
+            var user = await ctx.Users.AsNoTracking().Include(x => x.Roles)
+                .FirstOrDefaultAsync(x => x.Email == viewModel.Email);
+
+            if (user == null)
+                return StatusCode(401, new ResultViewModel<string>("Usuário ou senha inválido"));
+            
+            if(!PasswordHasher.Verify(user.PasswordHash, viewModel.Password))
+                return StatusCode(401, new ResultViewModel<string>("Usuário ou senha inválido"));
+
+            var token = tokenService.GenerateToken(user);
+            return Ok(new ResultViewModel<string>(token, null));
+        }
+        catch
+        {
+            return StatusCode(500, new ResultViewModel<string>("Houve um erro interno no servidor"));
+        }
     }
 
     [HttpPost("v1/accounts")]
@@ -27,7 +50,7 @@ public class AccountController : ControllerBase
     {
         if (!ModelState.IsValid)
             return BadRequest(new ResultViewModel<dynamic>(ModelState.GetErrors()));
-        
+
         try
         {
             var password = PasswordGenerator.Generate(length: 25, includeSpecialChars: true);
@@ -38,7 +61,7 @@ public class AccountController : ControllerBase
                 Slug = viewModel.Email.Replace("@", "-").Replace(".", "-"),
                 PasswordHash = PasswordHasher.Hash(password)
             };
-            
+
             await ctx.Users.AddAsync(user);
             await ctx.SaveChangesAsync();
 
@@ -46,7 +69,7 @@ public class AccountController : ControllerBase
             {
                 user.Name,
                 user.Email,
-                user.PasswordHash
+                password
             }));
         }
         catch (DbUpdateException e)
