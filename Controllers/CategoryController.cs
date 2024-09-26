@@ -1,7 +1,9 @@
+using AspBlog.Attributes;
 using AspBlog.Data;
 using AspBlog.Extensions;
 using AspBlog.Models;
 using AspBlog.ViewModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,6 +13,7 @@ namespace AspBlog.Controllers
     public class CategoryController : ControllerBase
     {
         [HttpGet("v1/categories/{id:int}")]
+        [ApiKey]
         public async Task<IActionResult> GetAsync(
             [FromRoute] int id,
             [FromServices] DataContext ctx
@@ -28,8 +31,9 @@ namespace AspBlog.Controllers
                 return StatusCode(500, new ResultViewModel<Category>("Houve um erro interno no servidor"));
             }
         }
-
+        
         [HttpGet("v1/categories")]
+        [Authorize]
         public async Task<IActionResult> ListAsync([FromServices] DataContext ctx)
         {
             try
