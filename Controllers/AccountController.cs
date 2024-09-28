@@ -1,8 +1,11 @@
+using System.Text.RegularExpressions;
 using AspBlog.Data;
 using AspBlog.Extensions;
 using AspBlog.Models;
 using AspBlog.Services;
 using AspBlog.ViewModels;
+using AspBlog.ViewModels.Accounts;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SecureIdentity.Password;
@@ -29,8 +32,8 @@ public class AccountController : ControllerBase
 
             if (user == null)
                 return StatusCode(401, new ResultViewModel<string>("Usuário ou senha inválido"));
-            
-            if(!PasswordHasher.Verify(user.PasswordHash, viewModel.Password))
+
+            if (!PasswordHasher.Verify(user.PasswordHash, viewModel.Password))
                 return StatusCode(401, new ResultViewModel<string>("Usuário ou senha inválido"));
 
             var token = tokenService.GenerateToken(user);
@@ -79,6 +82,46 @@ public class AccountController : ControllerBase
         catch
         {
             return StatusCode(500, new ResultViewModel<string>("Houve um erro interno no servidor"));
+        }
+    }
+    
+    [Authorize]
+    [HttpPost("v1/accounts/upload-image")]
+    public async Task<IActionResult> UploadImage(
+        [FromServices] DataContext ctx,
+        [FromServices] TokenService tokenService,
+        [FromBody] UploadImageViewModel viewModel
+    )
+    {
+        var fileName = $"{Guid.NewGuid().ToString()}.jpg";
+        var data = new Regex(@"^data:image\/[a-z]+;base64,").Replace(viewModel.Base64Image, "");
+        var bytes = Convert.FromBase64String(data);
+
+        try
+        {
+            await System.IO.File.WriteAllBytesAsync($"wwwroot/images/{fileName}", bytes);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new ResultViewModel<string>("Falha interna no servidor"));
+        }
+
+        var user = await ctx.Users.FirstOrDefaultAsync(x => x.Email == User.Identity.Name);
+        
+        if (user == null)
+            return NotFound(new ResultViewModel<Category>("Usuário não encontrado"));
+
+        user.Image = $"https://localhost:7088/images/{fileName}";
+        try
+        {
+            ctx.Users.Update(user);
+            await ctx.SaveChangesAsync();
+            
+            return Ok(new ResultViewModel<string>("Imagem alterada com sucesso!", null));
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new ResultViewModel<string>("Falha interna no servidor"));
         }
     }
 }
