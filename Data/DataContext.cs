@@ -6,6 +6,11 @@ namespace AspBlog.Data
 {
     public class DataContext : DbContext
     {
+        public DataContext(DbContextOptions<DataContext> options) : base(options)
+        {
+            
+        }
+        
         public DbSet<Category> Categories { get; set; }
         public DbSet<Post> Posts { get; set; }
         // public DbSet<PostTag> PostTags { get; set; }
@@ -13,11 +18,6 @@ namespace AspBlog.Data
         public DbSet<Tag> Tags { get; set; }
         public DbSet<User> Users { get; set; }
         // public DbSet<UserRole> UserRoles { get; set; }
-
-        protected override void OnConfiguring(DbContextOptionsBuilder options)
-        {
-            options.UseSqlServer("Server=localhost,1433;Database=AspBlog;User ID=sa;Password=654sdfAS@#$;TrustServerCertificate=True");
-        }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

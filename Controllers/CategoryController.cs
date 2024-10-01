@@ -35,6 +35,7 @@ namespace AspBlog.Controllers
         }
         
         [HttpGet("v1/categories")]
+        [Authorize]
         public async Task<IActionResult> ListAsync(
             [FromServices] DataContext ctx,
             [FromServices] IMemoryCache cache
