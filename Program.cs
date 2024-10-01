@@ -6,27 +6,34 @@ using AspBlog.Data;
 using AspBlog.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.ResponseCompression;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
 ConfigureAuthentication(builder);
-
 ConfigureMvc(builder);
 ConfigureServices(builder);
+ConfigureSwagger(builder);
 
 var app = builder.Build();
 
 ConfigureApp(app);
 
+app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseStaticFiles();
 app.MapControllers();
 app.UseResponseCompression();
 
-app.Run();
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
+app.Run();
 
 
 void ConfigureApp(WebApplication app)
@@ -42,30 +49,29 @@ void ConfigureApp(WebApplication app)
 
 void ConfigureServices(WebApplicationBuilder builder)
 {
-    builder.Services.AddDbContext<DataContext>();  // Injeção de dependência para o DataContext
-    builder.Services.AddTransient<TokenService>();  // Injeção de dependência para o TokenService
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    builder.Services.AddDbContext<DataContext>(options =>
+        options.UseSqlServer(connectionString)); // Injeção de dependência para o DataContext
+    builder.Services.AddTransient<TokenService>(); // Injeção de dependência para o TokenService
 }
 
 void ConfigureMvc(WebApplicationBuilder builder)
 {
     builder.Services.AddMemoryCache();
-    builder.Services.AddResponseCompression(options =>
-    {
-        options.Providers.Add<GzipCompressionProvider>();
-    });
+    builder.Services.AddResponseCompression(options => { options.Providers.Add<GzipCompressionProvider>(); });
     builder.Services.Configure<GzipCompressionProviderOptions>(options =>
     {
         options.Level = CompressionLevel.Optimal;
     });
     builder.Services.AddControllers().ConfigureApiBehaviorOptions(options =>
-    {
-        options.SuppressModelStateInvalidFilter = true;
-    })
-    .AddJsonOptions(x =>
-    {
-        x.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
-        x.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault;
-    });
+        {
+            options.SuppressModelStateInvalidFilter = true;
+        })
+        .AddJsonOptions(x =>
+        {
+            x.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+            x.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault;
+        });
 }
 
 void ConfigureAuthentication(WebApplicationBuilder builder)
@@ -85,4 +91,10 @@ void ConfigureAuthentication(WebApplicationBuilder builder)
             ValidateAudience = false
         };
     });
+}
+
+void ConfigureSwagger(WebApplicationBuilder builder)
+{
+    builder.Services.AddEndpointsApiExplorer();
+    builder.Services.AddSwaggerGen();
 }
