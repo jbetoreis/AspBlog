@@ -7,6 +7,7 @@ using AspBlog.ViewModels.Categories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace AspBlog.Controllers
 {
@@ -34,12 +35,19 @@ namespace AspBlog.Controllers
         }
         
         [HttpGet("v1/categories")]
-        [Authorize]
-        public async Task<IActionResult> ListAsync([FromServices] DataContext ctx)
+        public async Task<IActionResult> ListAsync(
+            [FromServices] DataContext ctx,
+            [FromServices] IMemoryCache cache
+        )
         {
             try
             {
-                var categories = await ctx.Categories.AsNoTracking().ToListAsync();
+                var categories = await cache.GetOrCreateAsync("ListCategories", entry =>
+                {
+                    entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(15);
+                    return ctx.Categories.AsNoTracking().ToListAsync();
+                });
+                
                 return Ok(new ResultViewModel<List<Category>>(categories));
             }
             catch
